@@ -26,12 +26,13 @@ private:
     int angle = 0;
 
     // Settings-related variables
-    int selectedOption = 0;
-    static constexpr int totalOptions = 3;
-    const char *options[totalOptions] = {"Option 1", "Option 2", "Option 3"};
+    int highlighedOption = 0;
+    int activeOption = -1;
+    static constexpr int totalOptions = 4;
+    const char *options[totalOptions] = {"Brightness", "Manual Time Set", "Reset WiFi", "Back"};
 
     // Mode management
-    enum Mode { CLOCK, SETTINGS } currentMode = CLOCK;
+    enum Mode { CLOCK, SETTINGS_MENU, SET_BRIGHTNESS } currentMode = CLOCK;
 
     void initializeCoordinates()
     {
@@ -134,7 +135,7 @@ private:
 
         for (int i = 0; i < totalOptions; i++)
         {
-            if (i == selectedOption)
+            if (i == highlighedOption)
             {
                 sprite.setTextColor(TFT_GREEN, TFT_BLACK);
             }
@@ -142,7 +143,7 @@ private:
             {
                 sprite.setTextColor(TFT_WHITE, TFT_BLACK);
             }
-            sprite.drawString(options[i], 120, 60 + i * 40);
+            sprite.drawCentreString(options[i], 120, 60 + i * 40, 1);
         }
 
         M5Dial.Display.pushImage(0, 0, 240, 240, (uint16_t *)sprite.getPointer());
@@ -157,6 +158,7 @@ public:
         sprite.createSprite(240, 240);
         sprite.setSwapBytes(true);
         sprite.setTextDatum(4);
+        M5Dial.Display.setBrightness(64);
 
         initializeCoordinates();
         initializeGrayscale();
@@ -166,7 +168,8 @@ public:
     {
         if (M5Dial.BtnA.wasPressed() && currentMode == CLOCK)
         {
-            currentMode = SETTINGS;
+            currentMode = SETTINGS_MENU;
+            return;
         }
 
         if (currentMode == CLOCK)
@@ -179,20 +182,42 @@ public:
                 drawClockFace();
             }
         }
-        else if (currentMode == SETTINGS)
+        else if (currentMode == SETTINGS_MENU)
         {
             static int lastEncoderValue = M5Dial.Encoder.read() / 4;
             int encoderValue = M5Dial.Encoder.read() / 4;
 
             if (encoderValue != lastEncoderValue)
             {
-                selectedOption = (selectedOption + (encoderValue > lastEncoderValue ? 1 : -1) + totalOptions) % totalOptions;
+                highlighedOption = (highlighedOption + (encoderValue > lastEncoderValue ? 1 : -1) + totalOptions) % totalOptions;
                 lastEncoderValue = encoderValue;
             }
 
             if (M5Dial.BtnA.wasPressed())
             {
-                // Handle option selection logic here
+                switch (highlighedOption)
+                {
+                case 0:
+                    currentMode = SET_BRIGHTNESS;
+                    break;
+                case 1:
+                    /* code */
+                    break;
+                case 2:
+                    sprite.fillSprite(TFT_BLACK);
+                    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+                    sprite.drawCentreString("Resetting WiFi...", 120, 120, 1);
+                    M5Dial.Display.pushImage(0, 0, 240, 240, (uint16_t *)sprite.getPointer());
+                    delay(1000);
+                    break;
+                case 3:
+                    currentMode = CLOCK;
+                    highlighedOption = 0;
+                    activeOption = -1;
+                    break;
+                default:
+                    break;
+                }
             }
 
             drawSettingsMenu();
