@@ -8,6 +8,7 @@
 #include "fonts/middleFont.h"
 #include "fonts/bigFont.h"
 #include "fonts/secFont.h"
+#include "DialConfig.h"
 
 class Display
 {
@@ -28,8 +29,8 @@ private:
     // Settings-related variables
     int highlighedOption = 0;
     int activeOption = -1;
-    static constexpr int totalOptions = 4;
-    const char *options[totalOptions] = {"Brightness", "Manual Time Set", "Reset WiFi", "Back"};
+    static constexpr int totalOptions = 5;
+    const char *options[totalOptions] = {"Brightness", "Manual Time Set", "Daylight saving time", "Reset WiFi", "Back"};
 
     // Mode management
     enum Mode { CLOCK, SETTINGS_MENU, SET_BRIGHTNESS } currentMode = CLOCK;
@@ -86,8 +87,8 @@ private:
         sprite.fillRect(144, 82, 33, 28, grays[8]);
 
         sprite.setTextColor(0x35D7, TFT_BLACK);
-        sprite.drawString("MON", 80, 72);
-        sprite.drawString("DAY", 160, 72);
+        sprite.drawString("m-c", 80, 72);
+        sprite.drawString("dz.", 160, 72);
         sprite.unloadFont();
 
         sprite.loadFont(middleFont);
@@ -132,6 +133,7 @@ private:
     {
         sprite.fillSprite(TFT_BLACK);
         sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+        DialConfig &config = DialConfig::getConfig();
 
         for (int i = 0; i < totalOptions; i++)
         {
@@ -143,7 +145,19 @@ private:
             {
                 sprite.setTextColor(TFT_WHITE, TFT_BLACK);
             }
-            sprite.drawCentreString(options[i], 120, 60 + i * 40, 1);
+            
+            if (i == 0) // Brightness
+            {
+                sprite.drawCentreString(options[i] + String(": ") + config.getBrightness(), 200, 60 + i * 40, 1);
+            }
+            else if (i == 2) // Daylight Saving Time
+            {
+                sprite.drawCentreString(options[i] + String(": ") + config.getUseDaylight() ? "On" : "Off", 200, 60 + i * 40, 1);
+            }
+            else {
+                sprite.drawCentreString(options[i], 120, 60 + i * 40, 1);
+            }
+
         }
 
         M5Dial.Display.pushImage(0, 0, 240, 240, (uint16_t *)sprite.getPointer());
@@ -165,7 +179,8 @@ public:
     }
 
     void loop()
-    {
+    {   
+        DialConfig &config = DialConfig::getConfig();
         if (M5Dial.BtnA.wasPressed() && currentMode == CLOCK)
         {
             currentMode = SETTINGS_MENU;
@@ -197,20 +212,32 @@ public:
             {
                 switch (highlighedOption)
                 {
-                case 0:
+                case 0: // Brightness
                     currentMode = SET_BRIGHTNESS;
                     break;
-                case 1:
-                    /* code */
+                case 1: // Manual Time Set
+                    sprite.fillSprite(TFT_BLACK);
+                    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+                    sprite.drawCentreString("Manual Time Set", 120, 120, 1);
+                    M5Dial.Display.pushImage(0, 0, 240, 240, (uint16_t *)sprite.getPointer());
+                    delay(1000);
                     break;
-                case 2:
+                case 2: // Daylight Saving Time
+                    sprite.fillSprite(TFT_BLACK);
+                    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+                    sprite.drawCentreString("Daylight Saving Time: " + config.getUseDaylight()? "true":"false", 120, 120, 1);
+                    config.setUseDaylight(!config.getUseDaylight());
+                    M5Dial.Display.pushImage(0, 0, 240, 240, (uint16_t *)sprite.getPointer());
+                    delay(1000);
+                    break;
+                case 3: // Reset WiFi
                     sprite.fillSprite(TFT_BLACK);
                     sprite.setTextColor(TFT_WHITE, TFT_BLACK);
                     sprite.drawCentreString("Resetting WiFi...", 120, 120, 1);
                     M5Dial.Display.pushImage(0, 0, 240, 240, (uint16_t *)sprite.getPointer());
                     delay(1000);
                     break;
-                case 3:
+                case 4: // Back
                     currentMode = CLOCK;
                     highlighedOption = 0;
                     activeOption = -1;
