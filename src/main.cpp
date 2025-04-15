@@ -1,53 +1,40 @@
 #include "Arduino.h"
 #include "M5Dial.h"
 #include "Display.h"
-#include "WiFiProvi.h"
-#include "TimeUpdateTask.h"
-#include "DialConfig.h"
+#include "RTClib.h"
+#include "Wire.h"
+#include <Preferences.h>
 
 M5Canvas img(&M5Dial.Display);
 TFT_eSPI tft;
 TFT_eSprite sprite(&tft);
-Display display(img, tft, sprite);
-WiFiProvisioning wifiProvisioning("1234", "Prov_M5Dial", "");
-TimeUpdateTask timeUpdateTask;
-
-bool inSettingsMenu = false;
+RTC_DS1307 rtc; // define a object of DS1307 class
+// Display display(img, tft, sprite, rtc);
+Display *display;
+Preferences preferences;
 
 void setup()
 {
-   Serial.begin(115200);
-   while (!Serial);
    m5::M5Unified::config_t cfg = M5.config();
+   cfg.internal_rtc = false; // Disable internal RTC
+
    M5Dial.begin(cfg, true, false);
    M5Dial.update();
-   DialConfig::getConfig().begin();
-   DialConfig &config = DialConfig::getConfig();
-   config.saveConfig();
-
-   if (config.getSSID() != "aaaaaaaa")
+   preferences.begin("dial_config", false); // Initialize preferences
+   M5Dial.Display.setBrightness(preferences.getUInt("brightness", 65)); // Set brightness from preferences
+   Wire.begin(SDA, SCL); // Initialize I2C with custom pins
+   rtc.begin(&Wire);     // Pass the Wire instance to the RTC object
+   if (!rtc.isrunning())
    {
-      WiFi.begin(config.getSSID().c_str(), config.getPassword().c_str());
-      Serial.println("Connecting to WiFi...");
-      while (WiFi.status() != WL_CONNECTED)
-      {
-         delay(1000);
-         Serial.println("Connecting to WiFi...");
-      }
-      Serial.println("Connected to WiFi!");
+      rtc.adjust(DateTime(F(__DATE__),F(__TIME__))); // Set the RTC to a known date and time
    }
-   else
-   {
-      Serial.println("No WiFi credentials found. Starting provisioning.");
-      wifiProvisioning.begin();
-   }
-   timeUpdateTask.start();
-   display.begin();
 
+   display = new Display(img, sprite, tft, rtc, preferences);
+   display->begin();
 }
 
 void loop()
 {
    M5Dial.update();
-   display.loop();
+   display->loop();
 }
