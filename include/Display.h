@@ -411,7 +411,6 @@ public:
         sprite.createSprite(240, 240);
         sprite.setSwapBytes(true);
         sprite.setTextDatum(4);
-        M5Dial.Display.setBrightness(64);
 
         initializeCoordinates();
         initializeGrayscale();
